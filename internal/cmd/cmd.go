@@ -17,6 +17,7 @@ func MainFunc(ctx context.Context, parser *gcmd.Parser) (err error) {
 		StopAllServices(ctx)
 		StopPanelServer(ctx)
 	})
+	
 	// go func() {
 	// 	err := MainCmd(ctx, parser)
 	// 	if err != nil {
