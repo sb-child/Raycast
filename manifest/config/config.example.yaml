@@ -1,0 +1,19 @@
+server:
+  address: ":8000"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+logger:
+  level: "all"
+  stdout: true
+
+raycast:
+  xray: "/path/to/xray"
+  xrayConfig: "/tmp/raycast-config.json"
+  xrayApiSocket: "/tmp/raycast-socket.sock"
+
+panel:
+  enabled: true
+  webEnabled: true
+  apiEnabled: true
+  rootDir: "/_p"

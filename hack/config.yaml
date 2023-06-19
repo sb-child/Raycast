@@ -2,6 +2,16 @@
 # CLI tool, only in development environment.
 # https://goframe.org/pages/viewpage.action?pageId=3673173
 gfcli:
+  build:
+    name: "Raycast"
+    arch: "amd64"
+    system: "linux,windows"
+    mod: "none"
+    packSrc: "resource"
+    # packSrc: "resource,manifest"
+    version: "v1.0.0"
+    output: "./Raycast-bin"
+    extra: "-trimpath"
   docker:
     build: "-a amd64 -s linux -p temp -ew"
     tagPrefixes:

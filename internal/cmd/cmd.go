@@ -2,29 +2,38 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
-
-	"raycast/internal/controller/hello"
+	"github.com/gogf/gf/v2/os/gproc"
 )
+
+func MainFunc(ctx context.Context, parser *gcmd.Parser) (err error) {
+	StartAllServices(ctx)
+	StartPanelServer(ctx)
+	gproc.AddSigHandlerShutdown(func(sig os.Signal) {
+		g.Log().Infof(ctx, "%s Signal received, stopping service...", sig.String())
+		StopAllServices(ctx)
+		StopPanelServer(ctx)
+	})
+	// go func() {
+	// 	err := MainCmd(ctx, parser)
+	// 	if err != nil {
+	// 		g.Log().Warning(ctx, "main process exited with error:", err)
+	// 		return
+	// 	}
+	// 	g.Log().Warning(ctx, "main process exited")
+	// }()
+	gproc.Listen()
+	return nil
+}
 
 var (
 	Main = gcmd.Command{
 		Name:  "main",
 		Usage: "main",
-		Brief: "start http server",
-		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
-			s := g.Server()
-			s.Group("/", func(group *ghttp.RouterGroup) {
-				group.Middleware(ghttp.MiddlewareHandlerResponse)
-				group.Bind(
-					hello.New(),
-				)
-			})
-			s.Run()
-			return nil
-		},
+		Brief: "start Raycast daemon",
+		Func:  MainFunc,
 	}
 )

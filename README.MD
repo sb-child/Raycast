@@ -1,4 +1,5 @@
-# GoFrame Template For SingleRepo
+# Raycast
 
-Quick Start: 
-- https://goframe.org/pages/viewpage.action?pageId=1114399
+An automatic manager for [Xray](https://github.com/XTLS/Xray-core)
+
+## wip
