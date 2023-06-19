@@ -118,19 +118,7 @@ func (x *sXrayExec) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting XrayExec...")
 	x.rayDone = make(chan error, 1)
 	x.configure(ctx)
-	// x.testXrayWithCfg(ctx)
-	// x.runXrayWithCfg(ctx)
-	g.Log().Infof(ctx, "status %d", x.xrayStatus(ctx))
 	x.startXray(ctx)
-	g.Log().Infof(ctx, "status %d", x.xrayStatus(ctx))
-	time.Sleep(time.Second)
-	g.Log().Infof(ctx, "status %d", x.xrayStatus(ctx))
-	// x.stopXray(ctx)
-	// g.Log().Infof(ctx, "status %d", x.xrayStatus(ctx))
-	// x.startXray(ctx)
-	// g.Log().Infof(ctx, "status %d", x.xrayStatus(ctx))
-	// x.stopXray(ctx)
-	// g.Log().Infof(ctx, "status %d", x.xrayStatus(ctx))
 }
 
 func (x *sXrayExec) Stop(ctx context.Context) {

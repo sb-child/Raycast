@@ -18,49 +18,6 @@ panel:
   apiEnabled: true
   rootDir: "/_p"
 
-
-# {
-#   "inbounds": [
-#     {
-#       "listen": "127.0.0.1",
-#       "port": 1080,
-#       "protocol": "协议名称",
-#       "settings": {},
-#       "streamSettings": {},
-#       "tag": "标识",
-#       "sniffing": {
-#         "enabled": true,
-#         "destOverride": ["http", "tls"]
-#       },
-#       "allocate": {
-#         "strategy": "always",
-#         "refresh": 5,
-#         "concurrency": 3
-#       }
-#     }
-#   ]
-# }
-
-
-# {
-#   "clients": [
-#     {
-#       "id": "5783a3e7-e373-51cd-8642-c83782b807c5",
-#       "level": 0,
-#       "alterId": 0,
-#       "email": "love@xray.com"
-#     }
-#   ],
-#   "default": {
-#     "level": 0,
-#     "alterId": 0
-#   },
-#   "detour": {
-#     "to": "tag_to_detour"
-#   },
-#   "disableInsecureEncryption": false
-# }
-
 certificates:
   - c1:
     refresh: 3600
@@ -103,4 +60,9 @@ inbound:
 outbound:
   - subscribe:
       link: "https://example.com/sub"
+      ignoreName:
+        - "剩余"
+        - "更新"
+      ignoreAddr:
+        - "127.0.0.1"
       refresh: 3600
