@@ -10,7 +10,7 @@ logger:
 raycast:
   xray: "/path/to/xray"
   xrayConfig: "/tmp/raycast-config.json"
-  xrayApiSocket: "/tmp/raycast-socket.sock"
+  xrayApiAddr: "127.0.0.1:2023"
 
 panel:
   enabled: true
@@ -38,29 +38,32 @@ inbound:
 
   - vmess:
       listen: "127.0.0.1:1081"
+      secure: true
       users:
-        - "de09c259-2132-4ba5-b922-f9e80edcd4e0,u1"
-        - "117ca23b-40ba-426b-94b9-4b8dc97f3383,u2"
+        - "de09c259-2132-4ba5-b922-f9e80edcd4e0:u1"
+        - "117ca23b-40ba-426b-94b9-4b8dc97f3383:u2"
       security:
         reality: "quq.example.com,bnb.example.com"
         priKey: "KLjeBJPS6QM9C5QzF1Deun7O6lUgysNOS4u0ppAppFQ"
         pubKey: "Fscob0tMI2OZ7pRV22z8Kqnt6oW-HcoBS9KlwYJQkwY"
         secret:
-          - "1234567890qwerty"
-          - "0987654321poiuyt"
+          - "1234567890abcdef"
+          - "abcdef1234567890"
         fingerprint: "firefox"
         fallback: "127.0.0.1:443|0"
-        ver: "1.8.0,1.8.3"
+        ver: "1.8.0-1.8.3"
         timeDiff: 100
+        spider: ""
 
   - vmess:
       listen: "127.0.0.1:1080"
+      secure: true
       users:
-        - "4b15c15e-5cc4-459f-aa09-63ec873e0c11,u3"
-        - "48c1751a-f5c9-4d93-a27a-e3cff1c92b6c,u4"
+        - "4b15c15e-5cc4-459f-aa09-63ec873e0c11:u3"
+        - "48c1751a-f5c9-4d93-a27a-e3cff1c92b6c:u4"
       security:
-        tls: "1.2-1.3"
-        domain: "www.example.com"
+        tls: "www.example.com"
+        ver: "1.2-1.3"
         sniCheck: true
         alpn: "h2,http/1.1"
         cipherSuites: ""

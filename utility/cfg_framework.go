@@ -14,8 +14,8 @@ type CfgFramework struct {
 	CfgInbounds  []*gjson.Json `json:"inbounds"`
 	CfgOutbounds []*gjson.Json `json:"outbounds"`
 	CfgTransport *gjson.Json   `json:"transport"`
-	CfgStats     *gjson.Json   `json:"Stats"`
-	CfgReverse   *gjson.Json   `json:"Reverse"`
+	CfgStats     *gjson.Json   `json:"stats"`
+	CfgReverse   *gjson.Json   `json:"reverse"`
 	CfgFakeDns   *gjson.Json   `json:"fakedns"`
 }
 
@@ -27,7 +27,7 @@ func (x *CfgFramework) Init() {
 	x.CfgPolicy = gjson.New(g.Map{})
 	x.CfgInbounds = make([]*gjson.Json, 0)
 	x.CfgOutbounds = make([]*gjson.Json, 0)
-	x.CfgTransport = gjson.New(g.Map{})
+	x.CfgTransport = nil
 	x.CfgStats = gjson.New(g.Map{})
 	x.CfgReverse = gjson.New(g.Map{})
 	x.CfgFakeDns = nil
@@ -44,6 +44,14 @@ func (x *CfgFramework) Api(b bool) {
 		x.CfgApi.Set("services", g.SliceStr{"HandlerService", "LoggerService", "StatsService"})
 	} else {
 		x.CfgApi = nil
+	}
+}
+
+func (x *CfgFramework) Transport(b bool) {
+	if b {
+		x.CfgTransport = gjson.New(g.Map{})
+	} else {
+		x.CfgTransport = nil
 	}
 }
 

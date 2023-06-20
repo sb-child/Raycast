@@ -50,7 +50,7 @@ type SocksProxyInbound struct {
 
 func (x *SocksProxyInbound) FromCfg(c *gjson.Json, tag string) *SocksProxyInbound {
 	x.Listen = c.Get("listen", "").String()
-	x.Udp = c.Get("udp", "").Bool()
+	x.Udp = c.Get("udp", false).Bool()
 	x.Users = c.Get("users", g.ArrayStr{}).Strings()
 	x.Tag = tag
 	return x
@@ -84,5 +84,70 @@ func (x *SocksProxyInbound) Json() *gjson.Json {
 	return r
 }
 
+type VmessInbound struct {
+	Listen   string
+	Users    []string
+	Secure   bool
+	Tag      string
+	Security *gjson.Json
+}
+
+func (x *VmessInbound) FromCfg(c *gjson.Json, tag string) *VmessInbound {
+	x.Listen = c.Get("listen", "").String()
+	x.Users = c.Get("users", g.ArrayStr{}).Strings()
+	x.Secure = c.Get("secure", false).Bool()
+	x.Tag = tag
+	x.Security = AutoSecurityJson(c.GetJson("security"), true)
+	return x
+}
+
+func (x *VmessInbound) Json() *gjson.Json {
+	host, port := Addr(x.Listen)
+	r := gjson.New(g.Map{
+		"protocol": "vmess",
+		"listen":   host,
+		"port":     port,
+		"settings": g.Map{
+			"disableInsecureEncryption": x.Secure,
+		},
+		"streamSettings": x.Security,
+		"tag":            x.Tag,
+	})
+	users := g.List{}
+	for _, v := range x.Users {
+		u, p := SplitUserPwd(v)
+		users = append(users, g.Map{
+			"level":   0,
+			"alterId": 0,
+			"id":      u,
+			"email":   p + "@cast.ray",
+		})
+	}
+	if len(users) != 0 {
+		r.Set("settings.clients", users)
+	}
+	return r
+}
+
 type ApiInbound struct {
+	Listen string
+}
+
+func (x *ApiInbound) FromCfg(addr string) *ApiInbound {
+	x.Listen = addr
+	return x
+}
+
+func (x *ApiInbound) Json() *gjson.Json {
+	host, port := Addr(x.Listen)
+	r := gjson.New(g.Map{
+		"protocol": "dokodemo-door",
+		"listen":   host,
+		"port":     port,
+		"settings": g.Map{
+			"address": host,
+		},
+		"tag": "api",
+	})
+	return r
 }

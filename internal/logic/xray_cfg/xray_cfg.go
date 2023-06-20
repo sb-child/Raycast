@@ -14,13 +14,12 @@ import (
 )
 
 type sXrayCfg struct {
-	xrayConfigFile   string
-	inboundsCfg      *gjson.Json
-	inboundGroup     []*gjson.Json
-	outboundsCfg     *gjson.Json
-	outboundGroup    []*gjson.Json
-	certificatesCfg  *gjson.Json
-	certificateGroup []*gjson.Json
+	xrayConfigFile string
+	xrayApiAddr    string
+	inboundsCfg    *gjson.Json
+	inboundGroup   []*gjson.Json
+	outboundsCfg   *gjson.Json
+	outboundGroup  []*gjson.Json
 }
 
 func init() {
@@ -52,6 +51,10 @@ func (x *sXrayCfg) parseInbound(ctx context.Context) {
 			n := utility.SocksProxyInbound{}
 			x.inboundGroup = append(x.inboundGroup,
 				n.FromCfg(t.GetJson("socks"), fmt.Sprintf("in-user-%d", i)).Json())
+		case "vmess":
+			n := utility.VmessInbound{}
+			x.inboundGroup = append(x.inboundGroup,
+				n.FromCfg(t.GetJson("vmess"), fmt.Sprintf("in-user-%d", i)).Json())
 		}
 	}
 }
@@ -61,6 +64,9 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	s := utility.CfgFramework{}
 	s.Init()
 	s.Api(true)
+	n := utility.ApiInbound{}
+	n.FromCfg(x.xrayApiAddr)
+	s.Inbounds(n.Json())
 	s.Inbounds(x.inboundGroup...)
 	f, err := gfile.OpenWithFlagPerm(x.xrayConfigFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0640)
 	if err != nil {
@@ -74,12 +80,11 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 func (x *sXrayCfg) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting XrayCfg...")
 	x.xrayConfigFile = g.Config().MustGet(ctx, "raycast.xrayConfig", "").String()
+	x.xrayApiAddr = g.Config().MustGet(ctx, "raycast.xrayApiAddr", "").String()
 	inbounds := gjson.New(g.Config().MustGet(ctx, "inbound", ""))
 	outbounds := gjson.New(g.Config().MustGet(ctx, "outbound", ""))
-	certificates := gjson.New(g.Config().MustGet(ctx, "certificates", ""))
 	x.inboundsCfg = inbounds
 	x.outboundsCfg = outbounds
-	x.certificatesCfg = certificates
 	x.parseInbound(ctx)
 	x.Generate(ctx)
 	// g.Log().Warningf(ctx, "%+v", firstKey(inbounds.Get("0")))
