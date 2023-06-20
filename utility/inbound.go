@@ -11,6 +11,13 @@ type HttpProxyInbound struct {
 	Tag    string
 }
 
+func (x *HttpProxyInbound) FromCfg(c *gjson.Json, tag string) *HttpProxyInbound {
+	x.Listen = c.Get("listen", "").String()
+	x.Users = c.Get("users", g.ArrayStr{}).Strings()
+	x.Tag = tag
+	return x
+}
+
 func (x *HttpProxyInbound) Json() *gjson.Json {
 	host, port := Addr(x.Listen)
 	r := gjson.New(g.Map{
@@ -39,6 +46,14 @@ type SocksProxyInbound struct {
 	Users  []string
 	Udp    bool
 	Tag    string
+}
+
+func (x *SocksProxyInbound) FromCfg(c *gjson.Json, tag string) *SocksProxyInbound {
+	x.Listen = c.Get("listen", "").String()
+	x.Udp = c.Get("udp", "").Bool()
+	x.Users = c.Get("users", g.ArrayStr{}).Strings()
+	x.Tag = tag
+	return x
 }
 
 func (x *SocksProxyInbound) Json() *gjson.Json {

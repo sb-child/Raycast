@@ -50,7 +50,7 @@ inbound:
           - "0987654321poiuyt"
         fingerprint: "firefox"
         fallback: "127.0.0.1:443|0"
-        ver: "1.8.0,1.8.1"
+        ver: "1.8.0,1.8.3"
         timeDiff: 100
 
   - vmess:
