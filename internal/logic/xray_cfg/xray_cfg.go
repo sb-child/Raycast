@@ -57,13 +57,14 @@ func (x *sXrayCfg) parseInbound(ctx context.Context) {
 }
 
 func (x *sXrayCfg) Generate(ctx context.Context) {
+	g.Log().Infof(ctx, "[XrayCfg] Generating config file to %s", x.xrayConfigFile)
 	s := utility.CfgFramework{}
 	s.Init()
 	s.Api(true)
 	s.Inbounds(x.inboundGroup...)
 	f, err := gfile.OpenWithFlagPerm(x.xrayConfigFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0640)
 	if err != nil {
-		g.Log().Errorf(ctx, "Failed to write config file: %s", err.Error())
+		g.Log().Errorf(ctx, "[XrayCfg] Failed to write config file: %s", err.Error())
 		return
 	}
 	f.WriteString(s.Json().String())

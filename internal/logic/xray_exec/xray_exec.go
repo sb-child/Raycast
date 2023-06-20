@@ -28,10 +28,10 @@ func New() *sXrayExec {
 }
 
 func (x *sXrayExec) xrayWait(ctx context.Context, p *gproc.Process) {
-	g.Log().Warning(ctx, "[XrayExec] Xray is running")
+	g.Log().Infof(ctx, "[XrayExec] Xray is running")
 	err := p.Wait()
 	if err == nil {
-		g.Log().Warning(ctx, "[XrayExec] Xray is exited")
+		g.Log().Infof(ctx, "[XrayExec] Xray is exited")
 	} else {
 		g.Log().Warning(ctx, "[XrayExec] Xray is crashed:", err.Error())
 	}
@@ -59,7 +59,7 @@ func (x *sXrayExec) startXray(ctx context.Context) error {
 		g.Log().Warning(ctx, "Failed to start Xray:", err.Error())
 		return err
 	}
-	g.Log().Warningf(ctx, "Xray is started, PID is [%d]", pid)
+	g.Log().Infof(ctx, "Xray is started, PID is [%d]", pid)
 	return nil
 }
 
