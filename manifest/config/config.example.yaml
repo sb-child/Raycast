@@ -70,9 +70,23 @@ inbound:
 outbound:
   - subscribe:
       link: "https://example.com/sub"
-      ignoreName:
+      excludeName:
         - "剩余"
         - "更新"
-      ignoreAddr:
+      excludeAddr:
         - "127.0.0.1"
       refresh: 3600
+
+  - links:
+      - "vmess://xxxxxxxxxxxxxxx"
+      - "ss://xxxxxxxxxxxxxxxxxx"
+
+  - vmess:
+    server: "127.0.0.1:1080"
+    user: "4b15c15e-5cc4-459f-aa09-63ec873e0c11"
+    security:
+      tls: "1.2-1.3"
+      domain: "www.example.com"
+      alpn: "h2,http/1.1"
+      cipherSuites: ""
+      fingerprint: "firefox"
