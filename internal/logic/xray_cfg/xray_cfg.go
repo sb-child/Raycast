@@ -59,6 +59,20 @@ func (x *sXrayCfg) parseInbound(ctx context.Context) {
 	}
 }
 
+func (x *sXrayCfg) parseOutbound(ctx context.Context) {
+	cfgLen := x.outboundsCfg.Len(".")
+	x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
+	for i := 0; i < cfgLen; i++ {
+		t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
+		switch firstKey(t.Var()) {
+		case "vmess":
+			n := utility.VmessOutbound{}
+			x.outboundGroup = append(x.outboundGroup,
+				n.FromCfg(t.GetJson("vmess"), fmt.Sprintf("out-user-%d", i)).Json())
+		}
+	}
+}
+
 func (x *sXrayCfg) Generate(ctx context.Context) {
 	g.Log().Infof(ctx, "[XrayCfg] Generating config file to %s", x.xrayConfigFile)
 	s := utility.CfgFramework{}
@@ -68,6 +82,7 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	n.FromCfg(x.xrayApiAddr)
 	s.Inbounds(n.Json())
 	s.Inbounds(x.inboundGroup...)
+	s.Outbounds(x.outboundGroup...)
 	f, err := gfile.OpenWithFlagPerm(x.xrayConfigFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0640)
 	if err != nil {
 		g.Log().Errorf(ctx, "[XrayCfg] Failed to write config file: %s", err.Error())
@@ -86,6 +101,7 @@ func (x *sXrayCfg) Start(ctx context.Context) {
 	x.inboundsCfg = inbounds
 	x.outboundsCfg = outbounds
 	x.parseInbound(ctx)
+	x.parseOutbound(ctx)
 	x.Generate(ctx)
 	// g.Log().Warningf(ctx, "%+v", firstKey(inbounds.Get("0")))
 }

@@ -73,23 +73,43 @@ inbound:
 outbound:
   - subscribe:
       link: "https://example.com/sub"
-      excludeName:
+      ignoreName:
         - "剩余"
         - "更新"
-      excludeAddr:
+      ignoreAddr:
         - "127.0.0.1"
-      refresh: 3600
+      refresh: 36009
 
   - links:
       - "vmess://xxxxxxxxxxxxxxx"
       - "ss://xxxxxxxxxxxxxxxxxx"
 
   - vmess:
-    server: "127.0.0.1:1080"
-    user: "4b15c15e-5cc4-459f-aa09-63ec873e0c11"
-    security:
-      tls: "1.2-1.3"
-      domain: "www.example.com"
-      alpn: "h2,http/1.1"
-      cipherSuites: ""
-      fingerprint: "firefox"
+      through: "0.0.0.0"
+      server: "127.0.0.1:1025"
+      user: "4b15c15e-5cc4-459f-aa09-63ec873e0c11"
+
+  - vmess:
+      through: "0.0.0.0"
+      server: "127.0.0.1:2048"
+      user: "4b15c15e-5cc4-459f-aa09-63ec873e0c11"
+      security:
+        tls: "www.example.com"
+        domain: "1.2-1.3"
+        alpn: "h2,http/1.1"
+        cipherSuites: ""
+        fingerprint: "firefox"
+
+  - vmess:
+      through: "0.0.0.0"
+      server: "127.0.0.1:3072"
+      user: "4b15c15e-5cc4-459f-aa09-63ec873e0c11"
+      security:
+        reality: "quq.example.com"
+        priKey: "KLjeBJPS6QM9C5QzF1Deun7O6lUgysNOS4u0ppAppFQ"
+        pubKey: "Fscob0tMI2OZ7pRV22z8Kqnt6oW-HcoBS9KlwYJQkwY"
+        secret:
+          - "1234567890abcdef"
+        fingerprint: "firefox"
+        timeDiff: 100
+        spider: ""

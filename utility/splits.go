@@ -25,6 +25,9 @@ func SplitUserPwd(x string) (user, pwd string) {
 
 func SplitItems(x string) []string {
 	x = strings.TrimSpace(x)
+	if len(x) == 0 {
+		return []string{}
+	}
 	a := strings.Split(x, ",")
 	for i := 0; i < len(a); i++ {
 		a[i] = strings.TrimSpace(a[i])

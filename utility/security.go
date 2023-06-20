@@ -90,6 +90,10 @@ func (x *RealitySecurity) Json() *gjson.Json {
 		r.Set("realitySettings.serverNames", SplitItems(x.Domains))
 		r.Set("realitySettings.shortIds", x.Secrets)
 	} else {
+		r.Remove("realitySettings.dest")
+		r.Remove("realitySettings.xver")
+		r.Remove("realitySettings.minClientVer")
+		r.Remove("realitySettings.maxClientVer")
 		r.Set("realitySettings.serverName", x.Domains)
 		if len(x.Secrets) == 0 {
 			r.Set("realitySettings.shortId", "")
