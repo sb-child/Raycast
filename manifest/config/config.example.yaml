@@ -25,6 +25,17 @@ certificates:
     key: "/path/to/key.key"
 
 inbound:
+  - http:
+      listen: "127.0.0.1:1070"
+      users:
+        - "admin:passwd"
+
+  - socks:
+      listen: "127.0.0.1:1071"
+      udp: true
+      users:
+        - "admin:passwd"
+
   - vmess:
       listen: "127.0.0.1:1081"
       users:
@@ -55,7 +66,6 @@ inbound:
         cipherSuites: ""
         fingerprint: "firefox"
         certificates: "c1"
-
 
 outbound:
   - subscribe:
