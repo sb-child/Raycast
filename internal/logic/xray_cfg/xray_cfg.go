@@ -20,6 +20,8 @@ type sXrayCfg struct {
 	inboundGroup   []*gjson.Json
 	outboundsCfg   *gjson.Json
 	outboundGroup  []*gjson.Json
+	routeCfg       []*gjson.Json
+	balancerCfg    []*gjson.Json
 }
 
 func init() {
@@ -83,6 +85,54 @@ func (x *sXrayCfg) parseOutbound(ctx context.Context) {
 	}
 }
 
+func (x *sXrayCfg) parseRoutes(ctx context.Context) {
+	inboundLen := x.inboundsCfg.Len(".")
+	outboundLen := x.outboundsCfg.Len(".")
+	inboundList := make([]string, inboundLen)
+	outboundList := make([]string, outboundLen)
+	for i := 0; i < inboundLen; i++ {
+		inboundList[i] = fmt.Sprintf("in-user-%d", i)
+	}
+	for i := 0; i < outboundLen; i++ {
+		outboundList[i] = fmt.Sprintf("out-user-%d", i)
+	}
+	// in-user-* > out-user-*
+	rt := utility.Route{
+		Network: "tcp,udp",
+		Inbound: inboundList,
+		Outbound: []string{
+			"$out-user-",
+		},
+	}
+	rtCfg, balCfg, _ := rt.Json()
+	x.routeCfg = append(x.routeCfg, rtCfg)
+	if balCfg != nil {
+		x.balancerCfg = append(x.balancerCfg, balCfg)
+	}
+	// in-system-{0} > out-user-{0}
+
+	// cfgLen := x.outboundsCfg.Len(".")
+	// x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
+	// for i := 0; i < cfgLen; i++ {
+	// 	t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
+	// 	k := firstKey(t.Var())
+	// 	switch k {
+	// 	case "vmess":
+	// 		n := utility.VmessOutbound{}
+	// 		x.outboundGroup = append(x.outboundGroup,
+	// 			n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+	// 	case "direct":
+	// 		n := utility.DirectOutbound{}
+	// 		x.outboundGroup = append(x.outboundGroup,
+	// 			n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+	// 	case "block":
+	// 		n := utility.BlockOutbound{}
+	// 		x.outboundGroup = append(x.outboundGroup,
+	// 			n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+	// 	}
+	// }
+}
+
 func (x *sXrayCfg) Generate(ctx context.Context) {
 	g.Log().Infof(ctx, "[XrayCfg] Generating config file to %s", x.xrayConfigFile)
 	s := utility.CfgFramework{}
@@ -93,6 +143,8 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	s.Inbounds(n.Json())
 	s.Inbounds(x.inboundGroup...)
 	s.Outbounds(x.outboundGroup...)
+	s.Routes(x.routeCfg...)
+	s.Balancers(x.balancerCfg...)
 	f, err := gfile.OpenWithFlagPerm(x.xrayConfigFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0640)
 	if err != nil {
 		g.Log().Errorf(ctx, "[XrayCfg] Failed to write config file: %s", err.Error())
@@ -112,6 +164,7 @@ func (x *sXrayCfg) Start(ctx context.Context) {
 	x.outboundsCfg = outbounds
 	x.parseInbound(ctx)
 	x.parseOutbound(ctx)
+	x.parseRoutes(ctx)
 	x.Generate(ctx)
 	// g.Log().Warningf(ctx, "%+v", firstKey(inbounds.Get("0")))
 }

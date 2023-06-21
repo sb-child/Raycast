@@ -50,7 +50,9 @@ func (x *CfgFramework) Api(b bool) {
 			"statsOutboundUplink":   true,
 			"statsOutboundDownlink": true,
 		})
-		x.CfgRouting.Set("rules", g.Slice{})
+		if x.CfgRouting.Get("rules", nil) == nil {
+			x.CfgRouting.Set("rules", g.Slice{})
+		}
 		x.CfgRouting.Append("rules", g.Map{
 			"inboundTag": g.Slice{
 				"api",
@@ -94,4 +96,28 @@ func (x *CfgFramework) Outbounds(a ...*gjson.Json) {
 		x.CfgOutbounds = []*gjson.Json{}
 	}
 	x.CfgOutbounds = append(x.CfgOutbounds, a...)
+}
+
+func (x *CfgFramework) Routes(a ...*gjson.Json) {
+	if x.CfgRouting == nil {
+		x.CfgRouting = gjson.New(g.Map{})
+	}
+	if x.CfgRouting.Get("rules", nil) == nil {
+		x.CfgRouting.Set("rules", g.Slice{})
+	}
+	for _, v := range a {
+		x.CfgRouting.Append("rules", v)
+	}
+}
+
+func (x *CfgFramework) Balancers(a ...*gjson.Json) {
+	if x.CfgRouting == nil {
+		x.CfgRouting = gjson.New(g.Map{})
+	}
+	if x.CfgRouting.Get("balancers", nil) == nil {
+		x.CfgRouting.Set("balancers", g.Slice{})
+	}
+	for _, v := range a {
+		x.CfgRouting.Append("balancers", v)
+	}
 }
