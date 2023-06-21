@@ -44,3 +44,51 @@ func (x *VmessOutbound) Json() *gjson.Json {
 	})
 	return r
 }
+
+type DirectOutbound struct {
+	Through  string
+	Resolver string
+	Tag      string
+}
+
+func (x *DirectOutbound) FromCfg(c *gjson.Json, tag string) *DirectOutbound {
+	x.Through = c.Get("through", "").String()
+	x.Resolver = c.Get("resolver", "").String()
+	x.Tag = tag
+	return x
+}
+
+func (x *DirectOutbound) Json() *gjson.Json {
+	r := gjson.New(g.Map{
+		"protocol": "freedom",
+		"settings": g.Map{
+			"domainStrategy": ResolverSelect(x.Resolver),
+			"redirect":       x.Through,
+			"userLevel":      0,
+		},
+		"tag": x.Tag,
+	})
+	return r
+}
+
+type BlockOutbound struct {
+	Tag string
+}
+
+func (x *BlockOutbound) FromCfg(c *gjson.Json, tag string) *BlockOutbound {
+	x.Tag = tag
+	return x
+}
+
+func (x *BlockOutbound) Json() *gjson.Json {
+	r := gjson.New(g.Map{
+		"protocol": "blackhole",
+		"settings": g.Map{
+			"response": g.Map{
+				"type": "none",
+			},
+		},
+		"tag": x.Tag,
+	})
+	return r
+}

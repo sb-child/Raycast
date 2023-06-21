@@ -84,6 +84,14 @@ outbound:
       - "vmess://xxxxxxxxxxxxxxx"
       - "ss://xxxxxxxxxxxxxxxxxx"
 
+  # 仅测试使用
+  - direct:
+      through: ":0"
+      resolver: "system" # system | xray | xray4 | xray6
+
+  # 仅测试使用
+  - block:
+
   - vmess:
       through: "0.0.0.0"
       server: "127.0.0.1:1025"

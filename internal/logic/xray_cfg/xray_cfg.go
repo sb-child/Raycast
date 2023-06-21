@@ -42,19 +42,20 @@ func (x *sXrayCfg) parseInbound(ctx context.Context) {
 	x.inboundGroup = make([]*gjson.Json, 0, cfgLen)
 	for i := 0; i < cfgLen; i++ {
 		t := x.inboundsCfg.GetJson(fmt.Sprintf("%d", i))
-		switch firstKey(t.Var()) {
+		k := firstKey(t.Var())
+		switch k {
 		case "http":
 			n := utility.HttpProxyInbound{}
 			x.inboundGroup = append(x.inboundGroup,
-				n.FromCfg(t.GetJson("http"), fmt.Sprintf("in-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), fmt.Sprintf("in-user-%d", i)).Json())
 		case "socks":
 			n := utility.SocksProxyInbound{}
 			x.inboundGroup = append(x.inboundGroup,
-				n.FromCfg(t.GetJson("socks"), fmt.Sprintf("in-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), fmt.Sprintf("in-user-%d", i)).Json())
 		case "vmess":
 			n := utility.VmessInbound{}
 			x.inboundGroup = append(x.inboundGroup,
-				n.FromCfg(t.GetJson("vmess"), fmt.Sprintf("in-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), fmt.Sprintf("in-user-%d", i)).Json())
 		}
 	}
 }
@@ -64,11 +65,20 @@ func (x *sXrayCfg) parseOutbound(ctx context.Context) {
 	x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
 	for i := 0; i < cfgLen; i++ {
 		t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
-		switch firstKey(t.Var()) {
+		k := firstKey(t.Var())
+		switch k {
 		case "vmess":
 			n := utility.VmessOutbound{}
 			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson("vmess"), fmt.Sprintf("out-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+		case "direct":
+			n := utility.DirectOutbound{}
+			x.outboundGroup = append(x.outboundGroup,
+				n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+		case "block":
+			n := utility.BlockOutbound{}
+			x.outboundGroup = append(x.outboundGroup,
+				n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
 		}
 	}
 }
