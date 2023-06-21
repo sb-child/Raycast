@@ -45,6 +45,41 @@ func (x *VmessOutbound) Json() *gjson.Json {
 	return r
 }
 
+type TrojanOutbound struct {
+	Through  string
+	Server   string
+	User     string
+	Tag      string
+	Security *gjson.Json
+}
+
+func (x *TrojanOutbound) FromCfg(c *gjson.Json, tag string) *TrojanOutbound {
+	x.Through = c.Get("through", "").String()
+	x.Server = c.Get("server", "").String()
+	x.User = c.Get("user", "").String()
+	x.Tag = tag
+	x.Security = AutoSecurityJson(c.GetJson("security"), false)
+	return x
+}
+
+func (x *TrojanOutbound) Json() *gjson.Json {
+	host, port := Addr(x.Server)
+	r := gjson.New(g.Map{
+		"sendThrough": x.Through,
+		"protocol":    "trojan",
+		"settings": g.Map{
+			"servers": g.List{g.Map{
+				"address":  host,
+				"port":     port,
+				"password": x.User,
+			}},
+		},
+		"streamSettings": x.Security,
+		"tag":            x.Tag,
+	})
+	return r
+}
+
 type DirectOutbound struct {
 	Through  string
 	Resolver string

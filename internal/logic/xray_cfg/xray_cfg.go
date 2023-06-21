@@ -44,20 +44,25 @@ func (x *sXrayCfg) parseInbound(ctx context.Context) {
 	x.inboundGroup = make([]*gjson.Json, 0, cfgLen)
 	for i := 0; i < cfgLen; i++ {
 		t := x.inboundsCfg.GetJson(fmt.Sprintf("%d", i))
+		tag := fmt.Sprintf("in-user-%d", i)
 		k := firstKey(t.Var())
 		switch k {
 		case "http":
 			n := utility.HttpProxyInbound{}
 			x.inboundGroup = append(x.inboundGroup,
-				n.FromCfg(t.GetJson(k), fmt.Sprintf("in-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), tag).Json())
 		case "socks":
 			n := utility.SocksProxyInbound{}
 			x.inboundGroup = append(x.inboundGroup,
-				n.FromCfg(t.GetJson(k), fmt.Sprintf("in-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), tag).Json())
 		case "vmess":
 			n := utility.VmessInbound{}
 			x.inboundGroup = append(x.inboundGroup,
-				n.FromCfg(t.GetJson(k), fmt.Sprintf("in-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), tag).Json())
+		case "trojan":
+			n := utility.TrojanInbound{}
+			x.inboundGroup = append(x.inboundGroup,
+				n.FromCfg(t.GetJson(k), tag).Json())
 		}
 	}
 }
@@ -67,20 +72,25 @@ func (x *sXrayCfg) parseOutbound(ctx context.Context) {
 	x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
 	for i := 0; i < cfgLen; i++ {
 		t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
+		tag := fmt.Sprintf("out-user-%d", i)
 		k := firstKey(t.Var())
 		switch k {
 		case "vmess":
 			n := utility.VmessOutbound{}
 			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), tag).Json())
+		case "trojan":
+			n := utility.TrojanOutbound{}
+			x.outboundGroup = append(x.outboundGroup,
+				n.FromCfg(t.GetJson(k), tag).Json())
 		case "direct":
 			n := utility.DirectOutbound{}
 			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), tag).Json())
 		case "block":
 			n := utility.BlockOutbound{}
 			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), fmt.Sprintf("out-user-%d", i)).Json())
+				n.FromCfg(t.GetJson(k), tag).Json())
 		}
 	}
 }

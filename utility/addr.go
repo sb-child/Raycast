@@ -2,17 +2,29 @@ package utility
 
 import (
 	"net/netip"
+	"strings"
+
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 func Addr(x string) (host string, port uint16) {
 	a, err := netip.ParseAddrPort(x)
 	if err != nil {
-		host = ""
-		port = 0
+		host, port = DomainAddr(x)
 		return
 	}
 	host = a.Addr().String()
 	port = a.Port()
+	return
+}
+
+func DomainAddr(x string) (host string, port uint16) {
+	a := strings.SplitN(x, ":", 2)
+	if len(a) != 2 {
+		return
+	}
+	host = a[0]
+	port = gconv.Uint16(a[1])
 	return
 }
 

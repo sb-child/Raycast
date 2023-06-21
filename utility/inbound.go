@@ -129,6 +129,57 @@ func (x *VmessInbound) Json() *gjson.Json {
 	return r
 }
 
+type TrojanInbound struct {
+	Listen   string
+	Fallback string
+	Users    []string
+	Tag      string
+	Security *gjson.Json
+}
+
+func (x *TrojanInbound) FromCfg(c *gjson.Json, tag string) *TrojanInbound {
+	x.Listen = c.Get("listen", "").String()
+	x.Fallback = c.Get("fallback", "").String()
+	x.Users = c.Get("users", g.ArrayStr{}).Strings()
+	x.Tag = tag
+	x.Security = AutoSecurityJson(c.GetJson("security"), true)
+	return x
+}
+
+func (x *TrojanInbound) Json() *gjson.Json {
+	host, port := Addr(x.Listen)
+	fbDest, fbVer := SplitFallback(x.Fallback)
+	r := gjson.New(g.Map{
+		"protocol": "trojan",
+		"listen":   host,
+		"port":     port,
+		"settings": g.Map{
+			"clients": g.List{},
+			"fallbacks": g.List{
+				g.Map{
+					"dest": fbDest,
+					"xver": fbVer,
+				},
+			},
+		},
+		"streamSettings": x.Security,
+		"tag":            x.Tag,
+	})
+	users := g.List{}
+	for _, v := range x.Users {
+		u, p := SplitUserPwd(v)
+		users = append(users, g.Map{
+			"level":    0,
+			"password": u,
+			"email":    p + "@cast.ray",
+		})
+	}
+	if len(users) != 0 {
+		r.Set("settings.clients", users)
+	}
+	return r
+}
+
 type ApiInbound struct {
 	Listen string
 }
