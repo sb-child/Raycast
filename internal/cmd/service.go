@@ -35,6 +35,7 @@ func StartAllServices(ctx context.Context) {
 	service.XrayCfg().Start(ctx)
 	service.XrayExec().Start(ctx)
 	service.XrayApi().Start(ctx)
+	service.Ctrl().Start(ctx)
 	g.Log().Info(ctx, "All services started")
 }
 
@@ -42,5 +43,6 @@ func StopAllServices(ctx context.Context) {
 	service.XrayApi().Stop(ctx)
 	service.XrayExec().Stop(ctx)
 	service.XrayCfg().Stop(ctx)
+	service.Ctrl().Stop(ctx)
 	g.Log().Info(ctx, "All services stopped")
 }
