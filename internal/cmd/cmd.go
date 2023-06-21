@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"os"
+	"raycast/internal/service"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gcmd"
@@ -26,6 +28,9 @@ func MainFunc(ctx context.Context, parser *gcmd.Parser) (err error) {
 	// 	}
 	// 	g.Log().Warning(ctx, "main process exited")
 	// }()
+	time.Sleep(1 *time.Second)
+	e := service.XrayApi().AddSystemInbound(ctx, "127.0.0.1:2018", "in-system-3")
+	g.Log().Info(ctx, e)
 	gproc.Listen()
 	return nil
 }

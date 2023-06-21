@@ -103,6 +103,9 @@ func (x *DirectOutbound) Json() *gjson.Json {
 		},
 		"tag": x.Tag,
 	})
+	if len(x.Through) == 0 {
+		r.Remove("protocol.redirect")
+	}
 	return r
 }
 

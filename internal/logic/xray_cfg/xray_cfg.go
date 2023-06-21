@@ -100,14 +100,26 @@ func (x *sXrayCfg) parseRoutes(ctx context.Context) {
 	outboundLen := x.outboundsCfg.Len(".")
 	inboundList := make([]string, inboundLen)
 	outboundList := make([]string, outboundLen)
+	systemInboundList := make([]string, outboundLen)
 	for i := 0; i < inboundLen; i++ {
 		inboundList[i] = fmt.Sprintf("in-user-%d", i)
 	}
 	for i := 0; i < outboundLen; i++ {
 		outboundList[i] = fmt.Sprintf("out-user-%d", i)
 	}
-	// in-user-* > out-user-*
+	for i := 0; i < outboundLen; i++ {
+		systemInboundList[i] = fmt.Sprintf("in-system-%d", i)
+	}
+	// direct private addresses
 	rt := utility.Route{
+		Network:  "tcp,udp",
+		TargetIp: []string{"geoip:private"},
+		Outbound: []string{"direct"},
+	}
+	rtCfg, _, _ := rt.Json()
+	x.routeCfg = append(x.routeCfg, rtCfg)
+	// in-user-* > out-user-*
+	rt = utility.Route{
 		Network: "tcp,udp",
 		Inbound: inboundList,
 		Outbound: []string{
@@ -120,7 +132,22 @@ func (x *sXrayCfg) parseRoutes(ctx context.Context) {
 		x.balancerCfg = append(x.balancerCfg, balCfg)
 	}
 	// in-system-{0} > out-user-{0}
-
+	for k, v := range systemInboundList {
+		rt := utility.Route{
+			Network:  "tcp,udp",
+			Inbound:  []string{v},
+			Outbound: []string{outboundList[k]},
+		}
+		rtCfg, _, _ := rt.Json()
+		x.routeCfg = append(x.routeCfg, rtCfg)
+	}
+	// block all
+	rt = utility.Route{
+		Network:  "tcp,udp",
+		Outbound: []string{"block"},
+	}
+	rtCfg, _, _ = rt.Json()
+	x.routeCfg = append(x.routeCfg, rtCfg)
 	// cfgLen := x.outboundsCfg.Len(".")
 	// x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
 	// for i := 0; i < cfgLen; i++ {
@@ -149,10 +176,13 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	s.Init()
 	s.Api(true)
 	n := utility.ApiInbound{}
-	n.FromCfg(x.xrayApiAddr)
-	s.Inbounds(n.Json())
+	s.Inbounds(n.FromCfg(x.xrayApiAddr).Json())
 	s.Inbounds(x.inboundGroup...)
 	s.Outbounds(x.outboundGroup...)
+	direct := utility.DirectOutbound{}
+	s.Outbounds(direct.FromCfg(nil, "direct").Json())
+	block := utility.BlockOutbound{}
+	s.Outbounds(block.FromCfg(nil, "block").Json())
 	s.Routes(x.routeCfg...)
 	s.Balancers(x.balancerCfg...)
 	f, err := gfile.OpenWithFlagPerm(x.xrayConfigFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0640)

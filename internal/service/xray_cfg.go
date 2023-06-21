@@ -11,6 +11,7 @@ import (
 
 type (
 	IXrayCfg interface {
+		Generate(ctx context.Context)
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}

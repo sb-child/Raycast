@@ -11,6 +11,8 @@ import (
 
 type (
 	IXrayApi interface {
+		AddSystemInbound(ctx context.Context, addr string, tag string) (err error)
+		DelSystemInbound(ctx context.Context, tag string)
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}
