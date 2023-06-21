@@ -44,8 +44,11 @@ func (x *sXrayApi) AddSystemInbound(ctx context.Context, addr string, tag string
 	return
 }
 
-func (x *sXrayApi) DelSystemInbound(ctx context.Context, tag string) {
-
+func (x *sXrayApi) DelSystemInbound(ctx context.Context, tag string) (err error) {
+	_, err = x.xray.HsClient.RemoveInbound(context.Background(), &command.RemoveInboundRequest{
+		Tag: tag,
+	})
+	return
 }
 
 func (x *sXrayApi) Start(ctx context.Context) {

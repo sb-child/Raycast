@@ -67,12 +67,14 @@ func (x *sXrayCfg) parseInbound(ctx context.Context) {
 	}
 }
 
-func (x *sXrayCfg) parseOutbound(ctx context.Context) {
+func (x *sXrayCfg) parseOutbound(ctx context.Context, outTag string, clear bool) {
 	cfgLen := x.outboundsCfg.Len(".")
-	x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
+	if clear {
+		x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
+	}
 	for i := 0; i < cfgLen; i++ {
 		t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
-		tag := fmt.Sprintf("out-user-%d", i)
+		tag := fmt.Sprintf("out-%s-%d", outTag, i)
 		k := firstKey(t.Var())
 		switch k {
 		case "vmess":
@@ -99,13 +101,13 @@ func (x *sXrayCfg) parseRoutes(ctx context.Context) {
 	inboundLen := x.inboundsCfg.Len(".")
 	outboundLen := x.outboundsCfg.Len(".")
 	inboundList := make([]string, inboundLen)
-	outboundList := make([]string, outboundLen)
+	systemOutboundList := make([]string, outboundLen)
 	systemInboundList := make([]string, outboundLen)
 	for i := 0; i < inboundLen; i++ {
 		inboundList[i] = fmt.Sprintf("in-user-%d", i)
 	}
 	for i := 0; i < outboundLen; i++ {
-		outboundList[i] = fmt.Sprintf("out-user-%d", i)
+		systemOutboundList[i] = fmt.Sprintf("out-system-%d", i)
 	}
 	for i := 0; i < outboundLen; i++ {
 		systemInboundList[i] = fmt.Sprintf("in-system-%d", i)
@@ -131,12 +133,12 @@ func (x *sXrayCfg) parseRoutes(ctx context.Context) {
 	if balCfg != nil {
 		x.balancerCfg = append(x.balancerCfg, balCfg)
 	}
-	// in-system-{0} > out-user-{0}
+	// in-system-{0} > out-system-{0}
 	for k, v := range systemInboundList {
 		rt := utility.Route{
 			Network:  "tcp,udp",
 			Inbound:  []string{v},
-			Outbound: []string{outboundList[k]},
+			Outbound: []string{systemOutboundList[k]},
 		}
 		rtCfg, _, _ := rt.Json()
 		x.routeCfg = append(x.routeCfg, rtCfg)
@@ -203,7 +205,8 @@ func (x *sXrayCfg) Start(ctx context.Context) {
 	x.inboundsCfg = inbounds
 	x.outboundsCfg = outbounds
 	x.parseInbound(ctx)
-	x.parseOutbound(ctx)
+	x.parseOutbound(ctx, "user", true)
+	x.parseOutbound(ctx, "system", false)
 	x.parseRoutes(ctx)
 	x.Generate(ctx)
 	// g.Log().Warningf(ctx, "%+v", firstKey(inbounds.Get("0")))
