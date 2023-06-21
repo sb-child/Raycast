@@ -121,3 +121,29 @@ outbound:
         fingerprint: "firefox"
         timeDiff: 100
         spider: ""
+
+# 仅测试使用
+route:
+  -
+    inbound:
+      - "in1"
+      - "in2"
+    outbound:
+      - "out1"
+      - "$user-out-"
+    network: "tcp"
+    protocol: "http,tls,bittorrent"
+    domain:
+      - "xxx.com"
+      - "yyy.com"
+    ip:
+      - "0.0.0.0/8"
+      - "fc00::/7"
+    user:
+      - "11111"
+      - "22222"
+    httpAttrs:
+      - :method: "GET"
+      - :path: "/23456"
+    sourcePort: "53,443,1000-2000"
+    targetPort: "53,443,1000-2000"

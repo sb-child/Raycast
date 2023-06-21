@@ -1,6 +1,8 @@
 package utility
 
 import (
+	"fmt"
+
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -42,8 +44,33 @@ func (x *CfgFramework) Api(b bool) {
 		x.CfgApi = gjson.New(g.Map{})
 		x.CfgApi.Set("tag", "api")
 		x.CfgApi.Set("services", g.SliceStr{"HandlerService", "LoggerService", "StatsService"})
+		x.CfgPolicy.Set("system", g.Map{
+			"statsInboundUplink":    true,
+			"statsInboundDownlink":  true,
+			"statsOutboundUplink":   true,
+			"statsOutboundDownlink": true,
+		})
+		x.CfgRouting.Set("rules", g.Slice{})
+		x.CfgRouting.Append("rules", g.Map{
+			"inboundTag": g.Slice{
+				"api",
+			},
+			"outboundTag": "api",
+			"type":        "field",
+		})
 	} else {
 		x.CfgApi = nil
+		x.CfgPolicy = gjson.New(g.Map{})
+		apiRoute := -1
+		for k, v := range x.CfgRouting.GetJsons("rules") {
+			if v.Get("outboundTag", "").String() == "api" {
+				apiRoute = k
+				break
+			}
+		}
+		if apiRoute != -1 {
+			x.CfgRouting.Remove(fmt.Sprintf("rules.%d", apiRoute))
+		}
 	}
 }
 
