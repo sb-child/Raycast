@@ -40,9 +40,9 @@ func StartAllServices(ctx context.Context) {
 }
 
 func StopAllServices(ctx context.Context) {
+	service.Ctrl().Stop(ctx)
 	service.XrayApi().Stop(ctx)
 	service.XrayExec().Stop(ctx)
 	service.XrayCfg().Stop(ctx)
-	service.Ctrl().Stop(ctx)
 	g.Log().Info(ctx, "All services stopped")
 }

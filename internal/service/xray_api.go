@@ -17,6 +17,7 @@ type (
 		DelOutbound(ctx context.Context, tag string) (err error)
 		AddSystemInbound(ctx context.Context, addr string, tag string) (err error)
 		DelInbound(ctx context.Context, tag string) (err error)
+		Stat(ctx context.Context, inbound bool, tag string, down bool) (val int64, err error)
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}

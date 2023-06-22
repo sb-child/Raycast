@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/app/proxyman/command"
+	statsService "github.com/xtls/xray-core/app/stats/command"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/core"
@@ -81,6 +82,34 @@ func (x *sXrayApi) DelInbound(ctx context.Context, tag string) (err error) {
 	_, err = x.xray.HsClient.RemoveInbound(ctx, &command.RemoveInboundRequest{
 		Tag: tag,
 	})
+	return
+}
+
+func (x *sXrayApi) Stat(ctx context.Context, inbound bool, tag string, down bool) (val int64, err error) {
+	p := ""
+	if inbound {
+		p = "inbound>>>"
+	} else {
+		p = "outbound>>>"
+	}
+	p += tag + ">>>traffic>>>"
+	if down {
+		p = "downlink"
+	} else {
+		p = "uplink"
+	}
+	r, err := x.xray.SsClient.QueryStats(ctx, &statsService.QueryStatsRequest{
+		Pattern: p,
+		Reset_:  false,
+	})
+	if err != nil {
+		return
+	}
+	s := r.GetStat()
+	if len(s) == 0 {
+		return 0, gerror.New("no stat found")
+	}
+	val = s[0].Value
 	return
 }
 
