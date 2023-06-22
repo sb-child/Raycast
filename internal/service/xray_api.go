@@ -7,12 +7,16 @@ package service
 
 import (
 	"context"
+
+	"github.com/gogf/gf/v2/encoding/gjson"
 )
 
 type (
 	IXrayApi interface {
+		AddOutbound(ctx context.Context, json *gjson.Json) error
+		DelOutbound(ctx context.Context, tag string) (err error)
 		AddSystemInbound(ctx context.Context, addr string, tag string) (err error)
-		DelSystemInbound(ctx context.Context, tag string) (err error)
+		DelInbound(ctx context.Context, tag string) (err error)
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}

@@ -1,16 +1,20 @@
 package xrayapi
 
 import (
+	"bytes"
 	"context"
 	"raycast/internal/service"
 	"raycast/utility"
 
+	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/app/proxyman/command"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/core"
+	confSerial "github.com/xtls/xray-core/infra/conf/serial"
 	httpInbound "github.com/xtls/xray-core/proxy/http"
 )
 
@@ -25,6 +29,35 @@ func init() {
 
 func New() *sXrayApi {
 	return &sXrayApi{}
+}
+
+func (x *sXrayApi) AddOutbound(ctx context.Context, json *gjson.Json) error {
+	framework := gjson.New(g.Map{
+		"outbounds": g.Slice{json},
+	})
+	cfg, err := confSerial.DecodeJSONConfig(bytes.NewBufferString(framework.String()))
+	if err != nil {
+		return err
+	}
+	if len(cfg.OutboundConfigs) == 0 {
+		return gerror.New("cannot find outbound config")
+	}
+	outbound := cfg.OutboundConfigs[0]
+	o, err := outbound.Build()
+	if err != nil {
+		return err
+	}
+	_, err = x.xray.HsClient.AddOutbound(ctx, &command.AddOutboundRequest{
+		Outbound: o,
+	})
+	return err
+}
+
+func (x *sXrayApi) DelOutbound(ctx context.Context, tag string) (err error) {
+	_, err = x.xray.HsClient.RemoveOutbound(ctx, &command.RemoveOutboundRequest{
+		Tag: tag,
+	})
+	return
 }
 
 func (x *sXrayApi) AddSystemInbound(ctx context.Context, addr string, tag string) (err error) {
@@ -44,8 +77,8 @@ func (x *sXrayApi) AddSystemInbound(ctx context.Context, addr string, tag string
 	return
 }
 
-func (x *sXrayApi) DelSystemInbound(ctx context.Context, tag string) (err error) {
-	_, err = x.xray.HsClient.RemoveInbound(context.Background(), &command.RemoveInboundRequest{
+func (x *sXrayApi) DelInbound(ctx context.Context, tag string) (err error) {
+	_, err = x.xray.HsClient.RemoveInbound(ctx, &command.RemoveInboundRequest{
 		Tag: tag,
 	})
 	return
