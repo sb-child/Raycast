@@ -11,6 +11,8 @@ import (
 
 type (
 	ICtrl interface {
+		EnableOutbound(ctx context.Context, tag string)
+		DisableOutbound(ctx context.Context, tag string)
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}

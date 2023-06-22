@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"os"
-	"raycast/internal/service"
-	"raycast/utility"
 	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -20,7 +18,7 @@ func MainFunc(ctx context.Context, parser *gcmd.Parser) (err error) {
 		StopAllServices(ctx)
 		StopPanelServer(ctx)
 	})
-	
+
 	// go func() {
 	// 	err := MainCmd(ctx, parser)
 	// 	if err != nil {
@@ -29,12 +27,12 @@ func MainFunc(ctx context.Context, parser *gcmd.Parser) (err error) {
 	// 	}
 	// 	g.Log().Warning(ctx, "main process exited")
 	// }()
-	time.Sleep(1 *time.Second)
-	e := service.XrayApi().AddSystemInbound(ctx, "127.0.0.1:2018", "in-system-3")
-	g.Log().Info(ctx, e)
-	b := utility.BlockOutbound{}
-	e = service.XrayApi().AddOutbound(ctx, b.FromCfg(nil, "test-out").Json())
-	g.Log().Info(ctx, e)
+	time.Sleep(1 * time.Second)
+	// e := service.XrayApi().AddSystemInbound(ctx, "127.0.0.1:2018", "in-system-3")
+	// g.Log().Info(ctx, e)
+	// b := utility.BlockOutbound{}
+	// e = service.XrayApi().AddOutbound(ctx, b.FromCfg(nil, "out-user-1").Json())
+	// g.Log().Info(ctx, e)
 	gproc.Listen()
 	return nil
 }

@@ -73,27 +73,9 @@ func (x *sXrayCfg) parseOutbound(ctx context.Context, outTag string, clear bool)
 		x.outboundGroup = make([]*gjson.Json, 0, cfgLen)
 	}
 	for i := 0; i < cfgLen; i++ {
-		t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
 		tag := fmt.Sprintf("out-%s-%d", outTag, i)
-		k := firstKey(t.Var())
-		switch k {
-		case "vmess":
-			n := utility.VmessOutbound{}
-			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), tag).Json())
-		case "trojan":
-			n := utility.TrojanOutbound{}
-			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), tag).Json())
-		case "direct":
-			n := utility.DirectOutbound{}
-			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), tag).Json())
-		case "block":
-			n := utility.BlockOutbound{}
-			x.outboundGroup = append(x.outboundGroup,
-				n.FromCfg(t.GetJson(k), tag).Json())
-		}
+		x.outboundGroup = append(x.outboundGroup,
+			x.GetOutboundSetting(ctx, i, tag))
 	}
 }
 
@@ -180,11 +162,13 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	n := utility.ApiInbound{}
 	s.Inbounds(n.FromCfg(x.xrayApiAddr).Json())
 	s.Inbounds(x.inboundGroup...)
-	s.Outbounds(x.outboundGroup...)
+
 	direct := utility.DirectOutbound{}
-	s.Outbounds(direct.FromCfg(nil, "direct").Json())
 	block := utility.BlockOutbound{}
 	s.Outbounds(block.FromCfg(nil, "block").Json())
+	s.Outbounds(direct.FromCfg(nil, "direct").Json())
+	s.Outbounds(x.outboundGroup...)
+
 	s.Routes(x.routeCfg...)
 	s.Balancers(x.balancerCfg...)
 	f, err := gfile.OpenWithFlagPerm(x.xrayConfigFile, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0640)
@@ -196,6 +180,36 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	f.Close()
 }
 
+func (x *sXrayCfg) GetUserOutboundList(ctx context.Context) []string {
+	cfgLen := x.outboundsCfg.Len(".")
+	r := []string{}
+	for i := 0; i < cfgLen; i++ {
+		tag := fmt.Sprintf("out-user-%d", i)
+		r = append(r, tag)
+	}
+	return r
+}
+
+func (x *sXrayCfg) GetOutboundSetting(ctx context.Context, n int, tag string) *gjson.Json {
+	t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", n))
+	k := firstKey(t.Var())
+	switch k {
+	case "vmess":
+		n := utility.VmessOutbound{}
+		return n.FromCfg(t.GetJson(k), tag).Json()
+	case "trojan":
+		n := utility.TrojanOutbound{}
+		return n.FromCfg(t.GetJson(k), tag).Json()
+	case "direct":
+		n := utility.DirectOutbound{}
+		return n.FromCfg(t.GetJson(k), tag).Json()
+	case "block":
+		n := utility.BlockOutbound{}
+		return n.FromCfg(t.GetJson(k), tag).Json()
+	}
+	return nil
+}
+
 func (x *sXrayCfg) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting XrayCfg...")
 	x.xrayConfigFile = g.Config().MustGet(ctx, "raycast.xrayConfig", "").String()
@@ -205,8 +219,8 @@ func (x *sXrayCfg) Start(ctx context.Context) {
 	x.inboundsCfg = inbounds
 	x.outboundsCfg = outbounds
 	x.parseInbound(ctx)
-	x.parseOutbound(ctx, "user", true)
-	x.parseOutbound(ctx, "system", false)
+	// x.parseOutbound(ctx, "user", true)
+	x.parseOutbound(ctx, "system", true)
 	x.parseRoutes(ctx)
 	x.Generate(ctx)
 	// g.Log().Warningf(ctx, "%+v", firstKey(inbounds.Get("0")))

@@ -7,11 +7,15 @@ package service
 
 import (
 	"context"
+
+	"github.com/gogf/gf/v2/encoding/gjson"
 )
 
 type (
 	IXrayCfg interface {
 		Generate(ctx context.Context)
+		GetUserOutboundList(ctx context.Context) []string
+		GetOutboundSetting(ctx context.Context, n int, tag string) *gjson.Json
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}
