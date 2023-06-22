@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"raycast/internal/service"
 	"raycast/utility"
+	"sync"
 	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -13,11 +14,14 @@ import (
 )
 
 type sCtrl struct {
-	userOutbounds         []string
-	enabledOutbounds      []string
-	outboundDelays        []float64
-	outboundNextSpeedtest []*gtime.Time
-	delayTimeout          float64
+	userOutbounds               []string
+	enabledOutbounds            []string
+	outboundDelays              []float64
+	outboundNextSpeedtest       []*gtime.Time
+	delayTimeout                float64
+	userOutboundLock            sync.Mutex
+	userOutboundUploadTraffic   []float64
+	userOutboundDownloadTraffic []float64
 }
 
 func init() {
@@ -26,6 +30,10 @@ func init() {
 
 func New() *sCtrl {
 	return &sCtrl{}
+}
+
+func (x *sCtrl) traffic(ctx context.Context, tag string) (up float64, dn float64) {
+
 }
 
 func (x *sCtrl) speedtest(ctx context.Context, tag string, timeout float64) float64 {
@@ -92,6 +100,8 @@ func (x *sCtrl) speedtestLoop(ctx context.Context, tag string) {
 }
 
 func (x *sCtrl) EnableOutbound(ctx context.Context, tag string) {
+	x.userOutboundLock.Lock()
+	defer x.userOutboundLock.Unlock()
 	n, err := utility.ExtractNumber(tag)
 	if err != nil {
 		g.Log().Warningf(ctx, "[Ctrl] Failed to enable outbound %s", tag)
@@ -112,6 +122,8 @@ func (x *sCtrl) EnableOutbound(ctx context.Context, tag string) {
 }
 
 func (x *sCtrl) DisableOutbound(ctx context.Context, tag string) {
+	x.userOutboundLock.Lock()
+	defer x.userOutboundLock.Unlock()
 	err := service.XrayApi().DelOutbound(ctx, tag)
 	if err != nil {
 		g.Log().Warningf(ctx, "[Ctrl] Failed to disable outbound %s: %s", tag, err.Error())
