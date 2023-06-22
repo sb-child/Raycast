@@ -9,13 +9,15 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/grand"
 )
 
 type sCtrl struct {
-	userOutbounds    []string
-	enabledOutbounds []string
-	outboundDelays   []float64
-	delayTimeout     float64
+	userOutbounds         []string
+	enabledOutbounds      []string
+	outboundDelays        []float64
+	outboundNextSpeedtest []*gtime.Time
+	delayTimeout          float64
 }
 
 func init() {
@@ -44,17 +46,49 @@ func (x *sCtrl) speedtest(ctx context.Context, tag string, timeout float64) floa
 	c := g.Client().Timeout(time.Millisecond * time.Duration(timeout*1000)).
 		Proxy("http://" + sysListen)
 	startTime := gtime.Now()
-	_, err = c.Get(ctx, "https://www.google.com/")
+	resp, err := c.Get(ctx, "https://maps.gstatic.com/generate_204")
 	if err != nil {
 		g.Log().Infof(ctx, "[Ctrl] Failed to speedtest %s, deleting %s: %s", tag, sysInbound, err.Error())
 		service.XrayApi().DelInbound(ctx, sysInbound)
 		return timeout
 	}
 	stopTime := gtime.Now()
+	resp.Close()
 	delay := stopTime.Sub(startTime)
 	g.Log().Infof(ctx, "[Ctrl] Speedtest %s done: %s, deleting %s", tag, delay.String(), sysInbound)
 	service.XrayApi().DelInbound(ctx, sysInbound)
 	return delay.Seconds()
+}
+
+func (x *sCtrl) speedtestLoop(ctx context.Context, tag string) {
+	n, _ := utility.ExtractNumber(tag)
+	delay := time.Millisecond * time.Duration(x.delayTimeout*1000)
+	// if x.outboundNextSpeedtest[n] == nil {
+	x.outboundNextSpeedtest[n] = gtime.Now().Add(
+		grand.D(time.Millisecond*500,
+			time.Second+delay),
+	)
+	g.Log().Infof(ctx, "[Ctrl/speedtest|%s] Next test at %s",
+		tag, x.outboundNextSpeedtest[n].String(),
+	)
+	// }
+	for {
+		if x.outboundNextSpeedtest[n].Before(gtime.Now()) {
+			r := x.speedtest(ctx, tag, x.delayTimeout)
+			rd := time.Millisecond * time.Duration(r*1000)
+			x.outboundDelays[n] =
+				x.outboundDelays[n]*(1-((r/x.delayTimeout)*0.8+0.1)) +
+					r*((r/x.delayTimeout)*0.8+0.1)
+			x.outboundNextSpeedtest[n] = x.outboundNextSpeedtest[n].Add(
+				grand.D(rd+delay*4, rd+delay*8),
+			)
+			g.Log().Infof(ctx, "[Ctrl/speedtest|%s] Result is %f, Next test at %s",
+				tag, r, x.outboundNextSpeedtest[n].String(),
+			)
+		} else {
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
 }
 
 func (x *sCtrl) EnableOutbound(ctx context.Context, tag string) {
@@ -95,19 +129,21 @@ func (x *sCtrl) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting Ctrl...")
 	x.userOutbounds = service.XrayCfg().GetUserOutboundList(ctx)
 	x.outboundDelays = make([]float64, len(x.userOutbounds))
+	x.outboundNextSpeedtest = make([]*gtime.Time, len(x.userOutbounds))
 	x.delayTimeout = g.Cfg().MustGet(ctx, "controller.delayTestTimeout", 5000.0).Float64() / 1000
 	for i := 0; i < len(x.outboundDelays); i++ {
 		x.outboundDelays[i] = x.delayTimeout
+		go x.speedtestLoop(ctx, fmt.Sprintf("out-system-%d", i))
 	}
 	go func() {
 		for {
 			time.Sleep(time.Second * 5)
-			for i := 0; i < len(x.userOutbounds); i++ {
-				d := x.speedtest(ctx, fmt.Sprintf("out-system-%d", i), x.delayTimeout)
-				x.outboundDelays[i] =
-					x.outboundDelays[i]*(1-((d/x.delayTimeout)*0.8+0.1)) +
-						d*((d/x.delayTimeout)*0.8+0.1)
-			}
+			// for i := 0; i < len(x.userOutbounds); i++ {
+			// 	d := x.speedtest(ctx, fmt.Sprintf("out-system-%d", i), x.delayTimeout)
+			// 	x.outboundDelays[i] =
+			// 		x.outboundDelays[i]*(1-((d/x.delayTimeout)*0.8+0.1)) +
+			// 			d*((d/x.delayTimeout)*0.8+0.1)
+			// }
 			for i := 0; i < len(x.userOutbounds); i++ {
 				g.Log().Warningf(ctx, "delay %d: %f", i, x.outboundDelays[i])
 			}
@@ -116,6 +152,7 @@ func (x *sCtrl) Start(ctx context.Context) {
 			// x.DisableOutbound(ctx, "out-user-0")
 		}
 	}()
+
 	// go func() {
 	// 	x.loop(ctx)
 	// }()
