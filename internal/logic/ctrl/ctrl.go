@@ -14,14 +14,16 @@ import (
 )
 
 type sCtrl struct {
+	delayTimeout                float64
+	outboundDelays              []float64
+	userOutboundUploadTraffic   []int64
+	userOutboundDownloadTraffic []int64
 	userOutbounds               []string
 	enabledOutbounds            []string
-	outboundDelays              []float64
 	outboundNextSpeedtest       []*gtime.Time
-	delayTimeout                float64
+	ctxCancel                   context.CancelFunc
 	userOutboundLock            sync.Mutex
-	userOutboundUploadTraffic   []float64
-	userOutboundDownloadTraffic []float64
+	taskLock                    sync.WaitGroup
 }
 
 func init() {
@@ -32,8 +34,59 @@ func New() *sCtrl {
 	return &sCtrl{}
 }
 
-func (x *sCtrl) traffic(ctx context.Context, tag string) (up float64, dn float64) {
+func (x *sCtrl) traffic(ctx context.Context, tag string) (up int64, dn int64) {
+	dn, err := service.XrayApi().Stat(ctx, false, tag, true)
+	if err != nil {
+		g.Log().Warningf(ctx, "[Ctrl] Failed to get traffic for %s: %s", tag, err)
+		return 0, 0
+	}
+	up, err = service.XrayApi().Stat(ctx, false, tag, false)
+	if err != nil {
+		g.Log().Warningf(ctx, "[Ctrl] Failed to get traffic for %s: %s", tag, err)
+		return 0, 0
+	}
+	return
+}
 
+func (x *sCtrl) trafficLoop(ctx context.Context, tag string) {
+	x.taskLock.Add(1)
+	defer x.taskLock.Done()
+	n, err := utility.ExtractNumber(tag)
+	if err != nil {
+		g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] Failed to start", tag)
+		return
+	}
+	tk := time.NewTicker(time.Second)
+	defer tk.Stop()
+	// g.Log().Infof(ctx, "[Ctrl/speedtest|%s] Next test at %s",
+	// 	tag,
+	// )
+	lastUp := int64(0)
+	lastDn := int64(0)
+	f := func() {
+		up, dn := x.traffic(ctx, tag)
+		if up < lastUp || dn < lastDn {
+			// maybe stats are reset
+			g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] reset Up %dB/s Down %dB/s", tag, up, dn)
+		} else {
+			up -= lastUp
+			dn -= lastDn
+		}
+		lastUp = up
+		lastDn = dn
+		x.userOutboundUploadTraffic[n] = up
+		x.userOutboundDownloadTraffic[n] = dn
+		g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] Up %dB/s Down %dB/s", tag, up, dn)
+	}
+	for {
+		if len(tk.C) >= 1 {
+			<-tk.C
+			f()
+		}
+		if utility.CheckCancel(ctx) {
+			break
+		}
+	}
 }
 
 func (x *sCtrl) speedtest(ctx context.Context, tag string, timeout float64) float64 {
@@ -63,15 +116,16 @@ func (x *sCtrl) speedtest(ctx context.Context, tag string, timeout float64) floa
 	stopTime := gtime.Now()
 	resp.Close()
 	delay := stopTime.Sub(startTime)
-	g.Log().Infof(ctx, "[Ctrl] Speedtest %s done: %s, deleting %s", tag, delay.String(), sysInbound)
+	// g.Log().Infof(ctx, "[Ctrl] Speedtest %s done: %s, deleting %s", tag, delay.String(), sysInbound)
 	service.XrayApi().DelInbound(ctx, sysInbound)
 	return delay.Seconds()
 }
 
 func (x *sCtrl) speedtestLoop(ctx context.Context, tag string) {
+	x.taskLock.Add(1)
+	defer x.taskLock.Done()
 	n, _ := utility.ExtractNumber(tag)
 	delay := time.Millisecond * time.Duration(x.delayTimeout*1000)
-	// if x.outboundNextSpeedtest[n] == nil {
 	x.outboundNextSpeedtest[n] = gtime.Now().Add(
 		grand.D(time.Millisecond*500,
 			time.Second+delay),
@@ -79,8 +133,10 @@ func (x *sCtrl) speedtestLoop(ctx context.Context, tag string) {
 	g.Log().Infof(ctx, "[Ctrl/speedtest|%s] Next test at %s",
 		tag, x.outboundNextSpeedtest[n].String(),
 	)
-	// }
 	for {
+		if utility.CheckCancel(ctx) {
+			break
+		}
 		if x.outboundNextSpeedtest[n].Before(gtime.Now()) {
 			r := x.speedtest(ctx, tag, x.delayTimeout)
 			rd := time.Millisecond * time.Duration(r*1000)
@@ -139,13 +195,18 @@ func (x *sCtrl) loop(ctx context.Context) {
 
 func (x *sCtrl) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting Ctrl...")
-	x.userOutbounds = service.XrayCfg().GetUserOutboundList(ctx)
+	var cctx context.Context
+	cctx, x.ctxCancel = context.WithCancel(ctx)
+	x.userOutbounds = service.XrayCfg().GetUserOutboundList(cctx)
 	x.outboundDelays = make([]float64, len(x.userOutbounds))
 	x.outboundNextSpeedtest = make([]*gtime.Time, len(x.userOutbounds))
-	x.delayTimeout = g.Cfg().MustGet(ctx, "controller.delayTestTimeout", 5000.0).Float64() / 1000
+	x.userOutboundUploadTraffic = make([]int64, len(x.userOutbounds))
+	x.userOutboundDownloadTraffic = make([]int64, len(x.userOutbounds))
+	x.delayTimeout = g.Cfg().MustGet(cctx, "controller.delayTestTimeout", 5000.0).Float64() / 1000
 	for i := 0; i < len(x.outboundDelays); i++ {
 		x.outboundDelays[i] = x.delayTimeout
-		go x.speedtestLoop(ctx, fmt.Sprintf("out-system-%d", i))
+		go x.speedtestLoop(cctx, fmt.Sprintf("out-system-%d", i))
+		go x.trafficLoop(cctx, fmt.Sprintf("out-system-%d", i))
 	}
 	go func() {
 		for {
@@ -156,15 +217,16 @@ func (x *sCtrl) Start(ctx context.Context) {
 			// 		x.outboundDelays[i]*(1-((d/x.delayTimeout)*0.8+0.1)) +
 			// 			d*((d/x.delayTimeout)*0.8+0.1)
 			// }
+			// up, dn := x.traffic(ctx, "out-user-22")
+			// g.Log().Warningf(cctx, "%d %d", up, dn)
 			for i := 0; i < len(x.userOutbounds); i++ {
-				g.Log().Warningf(ctx, "delay %d: %f", i, x.outboundDelays[i])
+				g.Log().Warningf(cctx, "delay %d: %f", i, x.outboundDelays[i])
 			}
 			// x.EnableOutbound(ctx, "out-user-0")
 			// time.Sleep(time.Second * 5)
 			// x.DisableOutbound(ctx, "out-user-0")
 		}
 	}()
-
 	// go func() {
 	// 	x.loop(ctx)
 	// }()
@@ -172,4 +234,6 @@ func (x *sCtrl) Start(ctx context.Context) {
 
 func (x *sCtrl) Stop(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Stopping Ctrl...")
+	x.ctxCancel()
+	x.taskLock.Wait()
 }

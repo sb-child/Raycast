@@ -106,9 +106,9 @@ func (x *sXrayApi) Stat(ctx context.Context, inbound bool, tag string, down bool
 	}
 	p += tag + ">>>traffic>>>"
 	if down {
-		p = "downlink"
+		p += "downlink"
 	} else {
-		p = "uplink"
+		p += "uplink"
 	}
 	r, err := x.xray.SsClient.QueryStats(ctx, &statsService.QueryStatsRequest{
 		Pattern: p,
