@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/grand"
+	"golang.org/x/exp/slices"
 )
 
 type sCtrl struct {
@@ -64,10 +65,20 @@ func (x *sCtrl) trafficLoop(ctx context.Context, tag string) {
 	lastUp := int64(0)
 	lastDn := int64(0)
 	f := func() {
+		x.userOutboundLock.Lock()
+		_, needTest := slices.BinarySearch(x.enabledOutbounds, tag)
+		x.userOutboundLock.Unlock()
+		if !needTest {
+			x.userOutboundUploadTraffic[n] = 0
+			x.userOutboundDownloadTraffic[n] = 0
+			lastUp = 0
+			lastDn = 0
+			return
+		}
 		up, dn := x.traffic(ctx, tag)
 		if up < lastUp || dn < lastDn {
 			// maybe stats are reset
-			g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] reset Up %dB/s Down %dB/s", tag, up, dn)
+			// g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] reset Up %dB/s Down %dB/s", tag, up, dn)
 		} else {
 			up -= lastUp
 			dn -= lastDn
@@ -206,7 +217,7 @@ func (x *sCtrl) Start(ctx context.Context) {
 	for i := 0; i < len(x.outboundDelays); i++ {
 		x.outboundDelays[i] = x.delayTimeout
 		go x.speedtestLoop(cctx, fmt.Sprintf("out-system-%d", i))
-		go x.trafficLoop(cctx, fmt.Sprintf("out-system-%d", i))
+		go x.trafficLoop(cctx, fmt.Sprintf("out-user-%d", i))
 	}
 	go func() {
 		for {
