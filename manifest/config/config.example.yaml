@@ -91,25 +91,27 @@ inbound:
 
 outbound:
   - subscribe:
-      link: "https://example.com/sub"
+      name: "订阅111" # 订阅名称
+      file: "/path/to/clash.yml" # 优先读取配置文件
+      link: "https://example.com/sub" # 如果配置文件为空, 从链接获取
       ignoreName:
-        - "剩余"
-        - "更新"
+        - "剩余流量" # 排除名称带有此字符串的节点
+        - "套餐到期"
       ignoreAddr:
-        - "127.0.0.1"
-      refresh: 36009
+        - "127.0.0.1" # 尚未实现
+      refresh: 36009 # 尚未实现
 
-  - links:
-      - "vmess://xxxxxxxxxxxxxxx"
-      - "ss://xxxxxxxxxxxxxxxxxx"
+  # - links:
+  #     - "vmess://xxxxxxxxxxxxxxx"
+  #     - "ss://xxxxxxxxxxxxxxxxxx"
 
-  # 仅测试使用
-  - direct:
-      through: ":0"
-      resolver: "system" # system | xray | xray4 | xray6
+  # # 仅测试使用
+  # - direct:
+  #     through: ":0"
+  #     resolver: "system" # system | xray | xray4 | xray6
 
-  # 仅测试使用
-  - block:
+  # # 仅测试使用
+  # - block:
 
   - vmess:
       through: "0.0.0.0"
@@ -154,8 +156,7 @@ outbound:
 
 # 仅测试使用
 route:
-  -
-    inbound:
+  - inbound:
       - "in1"
       - "in2"
     outbound:

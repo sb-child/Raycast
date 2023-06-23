@@ -3,11 +3,15 @@ package ctrl
 import (
 	"context"
 	"fmt"
+	"os"
 	"raycast/internal/service"
 	"raycast/utility"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -22,6 +26,8 @@ type sCtrl struct {
 	userOutboundUploadTraffic   []int64
 	userOutboundDownloadTraffic []int64
 	userOutbounds               []string
+	userOutboundCount           int
+	userOutboundNames           []string
 	enabledOutbounds            []string
 	outboundNextSpeedtest       []*gtime.Time
 	ctxCancel                   context.CancelFunc
@@ -44,9 +50,11 @@ func (x *sCtrl) outSwitchLoop(ctx context.Context) {
 	defer tk.Stop()
 	f := func() {
 		onlineOutbounds := make([]string, 0)
+		selected := make([]int, 0)
 		for k, v := range x.outboundDelays {
 			if v < x.offlineTimeout {
 				onlineOutbounds = append(onlineOutbounds, fmt.Sprintf("out-user-%d", k))
+				selected = append(selected, k)
 			}
 		}
 		if len(onlineOutbounds) == 0 {
@@ -67,6 +75,36 @@ func (x *sCtrl) outSwitchLoop(ctx context.Context) {
 		}
 		g.Log().Infof(ctx, "[Ctrl/OutSwitch] Selected %+v", onlineOutbounds)
 		// x.userOutboundLock.Unlock()
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"#", "节点名", "平均延迟", "[已选择]"})
+		// t.AppendRows([]table.Row{
+		// 	{1, "Arya", "Stark", 3000},
+		// 	{20, "Jon", "Snow", 2000, "You know nothing, Jon Snow!"},
+		// })
+		// t.AppendSeparator()
+		for k, v := range x.userOutboundNames {
+			d := x.outboundDelays[k]
+			var delayText string
+			var selectedText string
+			if d >= x.offlineTimeout {
+				delayText = text.FgHiRed.Sprintf("%d ms", int(d*1000))
+			} else {
+				delayText = text.FgGreen.Sprintf("%d ms", int(d*1000))
+			}
+			if _, found := slices.BinarySearch(selected, k); found {
+				selectedText = "[*]"
+			} else {
+				selectedText = ""
+			}
+			t.AppendRow([]interface{}{k, v,
+				delayText,
+				selectedText,
+			})
+		}
+		// t.AppendFooter(table.Row{"", "", "Total", 10000})
+		t.SetStyle(table.StyleColoredDark)
+		t.Render()
 	}
 	for {
 		if len(tk.C) >= 1 {
@@ -132,7 +170,7 @@ func (x *sCtrl) trafficLoop(ctx context.Context, tag string) {
 		lastDn = dn
 		x.userOutboundUploadTraffic[n] = up
 		x.userOutboundDownloadTraffic[n] = dn
-		g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] Up %dB/s Down %dB/s", tag, up, dn)
+		// g.Log().Warningf(ctx, "[Ctrl/Traffic|%s] Up %dB/s Down %dB/s", tag, up, dn)
 	}
 	for {
 		if len(tk.C) >= 1 {
@@ -262,13 +300,18 @@ func (x *sCtrl) Start(ctx context.Context) {
 	var cctx context.Context
 	cctx, x.ctxCancel = context.WithCancel(ctx)
 	x.userOutbounds = service.XrayCfg().GetUserOutboundList(cctx)
-	x.outboundDelays = make([]float64, len(x.userOutbounds))
-	x.outboundNextSpeedtest = make([]*gtime.Time, len(x.userOutbounds))
-	x.userOutboundUploadTraffic = make([]int64, len(x.userOutbounds))
-	x.userOutboundDownloadTraffic = make([]int64, len(x.userOutbounds))
+	x.userOutboundCount = len(x.userOutbounds)
+	x.userOutboundNames = make([]string, x.userOutboundCount)
+	for i := 0; i < x.userOutboundCount; i++ {
+		x.userOutboundNames[i] = service.XrayCfg().GetOutboundName(cctx, i)
+	}
+	x.outboundDelays = make([]float64, x.userOutboundCount)
+	x.outboundNextSpeedtest = make([]*gtime.Time, x.userOutboundCount)
+	x.userOutboundUploadTraffic = make([]int64, x.userOutboundCount)
+	x.userOutboundDownloadTraffic = make([]int64, x.userOutboundCount)
 	x.delayTimeout = g.Cfg().MustGet(cctx, "controller.delayTestTimeout", 5000.0).Float64() / 1000
 	x.offlineTimeout = g.Cfg().MustGet(cctx, "controller.markOfflineTimeout", 4000.0).Float64() / 1000
-	for i := 0; i < len(x.outboundDelays); i++ {
+	for i := 0; i < x.userOutboundCount; i++ {
 		x.outboundDelays[i] = x.delayTimeout
 		go x.speedtestLoop(cctx, fmt.Sprintf("out-system-%d", i))
 		go x.trafficLoop(cctx, fmt.Sprintf("out-user-%d", i))
