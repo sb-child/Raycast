@@ -59,14 +59,19 @@ func (x *sXrayCfg) preProcessOutbound(ctx context.Context) {
 		// 	n := utility.BlockOutbound{}
 		// 	return n.FromCfg(t.GetJson(k), tag).Json()
 		case "subscribe":
-			continue
+			s := utility.GetSubscribe(ctx, t.GetJson(k))
+			for _, v := range s {
+				r.Append(".", v)
+			}
+			// continue
 		default:
 			r.Append(".", t)
 		}
 		// return nil
 	}
-	println(x.outboundsCfg.String())
-	println(r.String())
+	x.outboundsCfg = r
+	// println(x.outboundsCfg.String())
+	// println(r.String())
 }
 
 func (x *sXrayCfg) parseInbound(ctx context.Context) {
@@ -240,6 +245,12 @@ func (x *sXrayCfg) GetOutboundSetting(ctx context.Context, n int, tag string) *g
 	return nil
 }
 
+func (x *sXrayCfg) GetOutboundName(ctx context.Context, n int) string {
+	t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", n))
+	k := firstKey(t.Var())
+	return t.GetJson(k).Get("name", "untitled").String()
+}
+
 func (x *sXrayCfg) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting XrayCfg...")
 	x.xrayConfigFile = g.Config().MustGet(ctx, "raycast.xrayConfig", "").String()
@@ -248,8 +259,9 @@ func (x *sXrayCfg) Start(ctx context.Context) {
 	outbounds := gjson.New(g.Config().MustGet(ctx, "outbound", ""))
 	x.inboundsCfg = inbounds
 	x.outboundsCfg = outbounds
-	x.parseInbound(ctx)
 	x.preProcessOutbound(ctx)
+
+	x.parseInbound(ctx)
 	// x.parseOutbound(ctx, "user", true)
 	x.parseOutbound(ctx, "system", true)
 	x.parseRoutes(ctx)

@@ -12,9 +12,11 @@ import (
 func GetSubscribe(ctx context.Context, cfg *gjson.Json) []*gjson.Json {
 	link := cfg.Get("link", "").String()
 	file := cfg.Get("file", "").String()
+	subName := cfg.Get("name", "Subscribe").String()
 	ignoreName := cfg.Get("ignoreName", []string{}).Strings()
+	r := make([]*gjson.Json, 0)
 	// ignoreAddr := cfg.Get("ignoreAddr", []string{}).Strings()
-	content := make([]byte, 0)
+	var content []byte
 	if len(file) != 0 {
 		content = gfile.GetBytes(file)
 	} else if len(link) != 0 {
@@ -22,7 +24,7 @@ func GetSubscribe(ctx context.Context, cfg *gjson.Json) []*gjson.Json {
 	} else {
 		return nil
 	}
-	if content == nil || len(content) == 0 {
+	if content == nil {
 		return nil
 	}
 	clashSub, err := gjson.LoadYaml(content)
@@ -31,7 +33,7 @@ func GetSubscribe(ctx context.Context, cfg *gjson.Json) []*gjson.Json {
 		return nil
 	}
 	proxies := clashSub.GetJsons("proxies")
-	if proxies == nil || len(proxies) == 0 {
+	if proxies == nil {
 		g.Log().Errorf(ctx, "GetSubscribe: no proxies found")
 		return nil
 	}
@@ -48,7 +50,22 @@ func GetSubscribe(ctx context.Context, cfg *gjson.Json) []*gjson.Json {
 		}
 		switch v.Get("type", "").String() {
 		case "trojan":
-
+			n := gjson.New(g.Map{
+				"trojan": g.Map{
+					"name":    subName + " > " + v.Get("name").String(),
+					"through": "0.0.0.0",
+					"server": v.Get("server", "").String() + ":" +
+						v.Get("port", 0).String(),
+					"user": v.Get("password", "").String(),
+					"security": g.Map{
+						"tls":  v.Get("sni", 0).String(),
+						"ver":  "1.2-1.3",
+						"alpn": "h2,http/1.1",
+					},
+				},
+			})
+			r = append(r, n)
 		}
 	}
+	return r
 }

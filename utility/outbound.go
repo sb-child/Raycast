@@ -6,6 +6,7 @@ import (
 )
 
 type VmessOutbound struct {
+	Name     string
 	Through  string
 	Server   string
 	User     string
@@ -14,6 +15,7 @@ type VmessOutbound struct {
 }
 
 func (x *VmessOutbound) FromCfg(c *gjson.Json, tag string) *VmessOutbound {
+	x.Name = c.Get("name", "untitled").String()
 	x.Through = c.Get("through", "").String()
 	x.Server = c.Get("server", "").String()
 	x.User = c.Get("user", "").String()
@@ -46,6 +48,7 @@ func (x *VmessOutbound) Json() *gjson.Json {
 }
 
 type TrojanOutbound struct {
+	Name     string
 	Through  string
 	Server   string
 	User     string
@@ -54,6 +57,7 @@ type TrojanOutbound struct {
 }
 
 func (x *TrojanOutbound) FromCfg(c *gjson.Json, tag string) *TrojanOutbound {
+	x.Name = c.Get("name", "untitled").String()
 	x.Through = c.Get("through", "").String()
 	x.Server = c.Get("server", "").String()
 	x.User = c.Get("user", "").String()
