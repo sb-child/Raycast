@@ -120,7 +120,7 @@ func (x *TlsSecurity) FromCfg(c *gjson.Json, inbound bool) *TlsSecurity {
 	x.Domain = c.Get("tls", "").String()
 	x.VersionRange = c.Get("ver", "1.2-1.3").String()
 	x.SniCheck = c.Get("sniCheck", true).Bool()
-	x.Alpn = c.Get("alpn", "h2,http/1.1").String()
+	x.Alpn = c.Get("alpn", "").String()
 	x.CipherSuites = c.Get("cipherSuites", "").String()
 	x.Fingerprint = c.Get("fingerprint", "").String()
 	x.Certificates = c.Get("certificates", "").String()

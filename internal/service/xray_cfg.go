@@ -16,6 +16,7 @@ type (
 		Generate(ctx context.Context)
 		GetUserOutboundList(ctx context.Context) []string
 		GetOutboundSetting(ctx context.Context, n int, tag string) *gjson.Json
+		GetOutboundName(ctx context.Context, n int) string
 		Start(ctx context.Context)
 		Stop(ctx context.Context)
 	}
