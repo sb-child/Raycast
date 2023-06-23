@@ -14,6 +14,7 @@ raycast:
 
 controller:
   delayTestTimeout: 5000
+  markOfflineTimeout: 4000
 
 panel:
   enabled: true
