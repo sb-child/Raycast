@@ -39,6 +39,36 @@ func firstKey(m *gvar.Var) string {
 	return "" // return empty string if map is empty
 }
 
+func (x *sXrayCfg) preProcessOutbound(ctx context.Context) {
+	r := gjson.New(g.Slice{})
+	cfgLen := x.outboundsCfg.Len(".")
+	for i := 0; i < cfgLen; i++ {
+		t := x.outboundsCfg.GetJson(fmt.Sprintf("%d", i))
+		k := firstKey(t.Var())
+		switch k {
+		// case "vmess":
+		// 	n := utility.VmessOutbound{}
+		// 	return n.FromCfg(t.GetJson(k), tag).Json()
+		// case "trojan":
+		// 	n := utility.TrojanOutbound{}
+		// 	return n.FromCfg(t.GetJson(k), tag).Json()
+		// case "direct":
+		// 	n := utility.DirectOutbound{}
+		// 	return n.FromCfg(t.GetJson(k), tag).Json()
+		// case "block":
+		// 	n := utility.BlockOutbound{}
+		// 	return n.FromCfg(t.GetJson(k), tag).Json()
+		case "subscribe":
+			continue
+		default:
+			r.Append(".", t)
+		}
+		// return nil
+	}
+	println(x.outboundsCfg.String())
+	println(r.String())
+}
+
 func (x *sXrayCfg) parseInbound(ctx context.Context) {
 	cfgLen := x.inboundsCfg.Len(".")
 	x.inboundGroup = make([]*gjson.Json, 0, cfgLen)
@@ -219,6 +249,7 @@ func (x *sXrayCfg) Start(ctx context.Context) {
 	x.inboundsCfg = inbounds
 	x.outboundsCfg = outbounds
 	x.parseInbound(ctx)
+	x.preProcessOutbound(ctx)
 	// x.parseOutbound(ctx, "user", true)
 	x.parseOutbound(ctx, "system", true)
 	x.parseRoutes(ctx)
