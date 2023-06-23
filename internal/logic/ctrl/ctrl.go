@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"raycast/internal/service"
 	"raycast/utility"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 type sCtrl struct {
 	delayTimeout                float64
+	offlineTimeout              float64
 	outboundDelays              []float64
 	userOutboundUploadTraffic   []int64
 	userOutboundDownloadTraffic []int64
@@ -33,6 +35,49 @@ func init() {
 
 func New() *sCtrl {
 	return &sCtrl{}
+}
+
+func (x *sCtrl) outSwitchLoop(ctx context.Context) {
+	x.taskLock.Add(1)
+	defer x.taskLock.Done()
+	tk := time.NewTicker(time.Second * 5)
+	defer tk.Stop()
+	f := func() {
+		onlineOutbounds := make([]string, 0)
+		for k, v := range x.outboundDelays {
+			if v < x.offlineTimeout {
+				onlineOutbounds = append(onlineOutbounds, fmt.Sprintf("out-user-%d", k))
+			}
+		}
+		if len(onlineOutbounds) == 0 {
+			return
+		}
+		// x.userOutboundLock.Lock()
+		// enable selected
+		for _, v := range onlineOutbounds {
+			if _, found := slices.BinarySearch(x.enabledOutbounds, v); !found {
+				x.EnableOutbound(ctx, v)
+			}
+		}
+		// disable others
+		for _, v := range x.userOutbounds {
+			if _, found := slices.BinarySearch(onlineOutbounds, v); !found {
+				x.DisableOutbound(ctx, v)
+			}
+		}
+		g.Log().Infof(ctx, "[Ctrl/OutSwitch] Selected %+v", onlineOutbounds)
+		// x.userOutboundLock.Unlock()
+	}
+	for {
+		if len(tk.C) >= 1 {
+			<-tk.C
+			f()
+		}
+		if utility.CheckCancel(ctx) {
+			break
+		}
+		time.Sleep(time.Millisecond * 1)
+	}
 }
 
 func (x *sCtrl) traffic(ctx context.Context, tag string) (up int64, dn int64) {
@@ -97,6 +142,7 @@ func (x *sCtrl) trafficLoop(ctx context.Context, tag string) {
 		if utility.CheckCancel(ctx) {
 			break
 		}
+		time.Sleep(time.Millisecond * 1)
 	}
 }
 
@@ -181,6 +227,13 @@ func (x *sCtrl) EnableOutbound(ctx context.Context, tag string) {
 	}
 	err = service.XrayApi().AddOutbound(ctx, json)
 	if err != nil {
+		if strings.Contains(err.Error(), "existing tag found") {
+			if _, found := slices.BinarySearch(x.enabledOutbounds, tag); !found {
+				x.enabledOutbounds = append(x.enabledOutbounds, tag)
+			}
+			g.Log().Infof(ctx, "[Ctrl] Enabled outbound %s but exists", tag)
+			return
+		}
 		g.Log().Warningf(ctx, "[Ctrl] Failed to enable outbound %s: %s", tag, err.Error())
 		return
 	}
@@ -214,11 +267,13 @@ func (x *sCtrl) Start(ctx context.Context) {
 	x.userOutboundUploadTraffic = make([]int64, len(x.userOutbounds))
 	x.userOutboundDownloadTraffic = make([]int64, len(x.userOutbounds))
 	x.delayTimeout = g.Cfg().MustGet(cctx, "controller.delayTestTimeout", 5000.0).Float64() / 1000
+	x.offlineTimeout = g.Cfg().MustGet(cctx, "controller.markOfflineTimeout", 4000.0).Float64() / 1000
 	for i := 0; i < len(x.outboundDelays); i++ {
 		x.outboundDelays[i] = x.delayTimeout
 		go x.speedtestLoop(cctx, fmt.Sprintf("out-system-%d", i))
 		go x.trafficLoop(cctx, fmt.Sprintf("out-user-%d", i))
 	}
+	go x.outSwitchLoop(cctx)
 	go func() {
 		for {
 			time.Sleep(time.Second * 5)
@@ -230,9 +285,9 @@ func (x *sCtrl) Start(ctx context.Context) {
 			// }
 			// up, dn := x.traffic(ctx, "out-user-22")
 			// g.Log().Warningf(cctx, "%d %d", up, dn)
-			for i := 0; i < len(x.userOutbounds); i++ {
-				g.Log().Warningf(cctx, "delay %d: %f", i, x.outboundDelays[i])
-			}
+			// for i := 0; i < len(x.userOutbounds); i++ {
+			// 	g.Log().Warningf(cctx, "delay %d: %f", i, x.outboundDelays[i])
+			// }
 			// x.EnableOutbound(ctx, "out-user-0")
 			// time.Sleep(time.Second * 5)
 			// x.DisableOutbound(ctx, "out-user-0")
