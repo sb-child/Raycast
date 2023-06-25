@@ -215,11 +215,11 @@ func (x *sXrayCfg) Generate(ctx context.Context) {
 	f.Close()
 }
 
-func (x *sXrayCfg) GetUserOutboundList(ctx context.Context) []string {
+func (x *sXrayCfg) GetUserOutboundList(ctx context.Context, n string) []string {
 	cfgLen := x.outboundsCfg.Len(".")
 	r := []string{}
 	for i := 0; i < cfgLen; i++ {
-		tag := fmt.Sprintf("out-user-%d", i)
+		tag := fmt.Sprintf("out-%s-%d", n, i)
 		r = append(r, tag)
 	}
 	return r
