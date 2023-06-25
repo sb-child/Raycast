@@ -292,6 +292,16 @@ func (x *sCtrl) DisableOutbound(ctx context.Context, tag string) {
 }
 
 func (x *sCtrl) loop(ctx context.Context) {
+	// wait for xray
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Millisecond * 500)
+		err := service.XrayApi().DelOutbound(ctx, "conn-test")
+		if err == nil {
+			break
+		}
+		g.Log().Warning(ctx, "[Ctrl/loop] waiting for xray start...")
+	}
+	// speedtest
 
 }
 
