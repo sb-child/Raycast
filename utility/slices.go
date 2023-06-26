@@ -28,3 +28,11 @@ func SortProxy(proxies []consts.ProxyWithLatency) {
 		return proxies[i].Latency < proxies[j].Latency
 	})
 }
+
+func SelectPreferredProxies(proxies []consts.ProxyWithLatency) []consts.ProxyWithLatency {
+	numPreferredProxies := len(proxies) / 2
+	if numPreferredProxies < 1 {
+		numPreferredProxies = 1
+	}
+	return proxies[:numPreferredProxies]
+}
