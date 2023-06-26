@@ -129,7 +129,11 @@ func (x *sXrayApi) Start(ctx context.Context) {
 	g.Log().Warning(ctx, "[service] Starting XrayApi...")
 	x.xrayApiAddr = g.Config().MustGet(ctx, "raycast.xrayApiAddr", "").String()
 	err := x.xray.Init(x.xrayApiAddr)
-	g.Log().Info(ctx, err)
+	if err != nil {
+		g.Log().Errorf(ctx, "[XrayApi] Api service is connecting to %s with err %s", x.xrayApiAddr, err.Error())
+	} else {
+		g.Log().Infof(ctx, "[XrayApi] Api service is connecting to %s", x.xrayApiAddr)
+	}
 }
 
 func (x *sXrayApi) Stop(ctx context.Context) {

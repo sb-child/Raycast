@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"raycast/internal/consts"
 	"raycast/internal/service"
 	"raycast/utility"
 	"strings"
@@ -348,6 +349,39 @@ func (x *sCtrl) loop(ctx context.Context) {
 	// speedtest
 	r := x.speedtestSelected(ctx, x.systemOutbounds)
 	g.Log().Infof(ctx, "%+v result %+v", x.systemOutbounds, r)
+	proxies := make([]consts.ProxyWithLatency, x.userOutboundCount)
+	for i := 0; i < x.userOutboundCount; i++ {
+		proxies[i].Tag = x.systemOutbounds[i]
+		proxies[i].Index, _ = utility.ExtractNumber(x.systemOutbounds[i])
+		proxies[i].Name = x.userOutboundNames[i]
+		proxies[i].Latency = time.Millisecond * time.Duration(r[i]*1000)
+	}
+	utility.SortProxy(proxies)
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"#", "节点名", "平均延迟", "[已选择]"})
+	for _, v := range proxies {
+		d := v.Latency
+		var delayText string
+		var selectedText string
+		if d.Seconds() >= x.offlineTimeout {
+			delayText = text.FgHiRed.Sprintf("%d ms", int(d.Milliseconds()))
+		} else {
+			delayText = text.FgGreen.Sprintf("%d ms", int(d.Milliseconds()))
+		}
+		// if _, found := utility.IndexOf2(selected, k); found {
+		// 	selectedText = "[*]"
+		// } else {
+		// 	selectedText = ""
+		// }
+		t.AppendRow([]interface{}{v.Index, v.Name,
+			delayText,
+			selectedText,
+		})
+	}
+	// t.AppendFooter(table.Row{"", "", "Total", 10000})
+	t.SetStyle(table.StyleColoredDark)
+	t.Render()
 }
 
 func (x *sCtrl) Start(ctx context.Context) {
